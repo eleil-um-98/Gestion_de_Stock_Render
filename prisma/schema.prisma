@@ -1,0 +1,107 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  VENDEDOR
+  ALMACENISTA
+}
+
+model User {
+  id        Int        @id @default(autoincrement())
+  name      String
+  username  String     @unique
+  password  String
+  role      Role       @default(VENDEDOR)
+  isActive  Boolean    @default(true)
+  sales     Sale[]
+  purchases Purchase[]
+  createdAt DateTime   @default(now())
+}
+
+model Product {
+  id              Int              @id @default(autoincrement())
+  name            String
+  description     String?
+  price           Float
+  stock           Int              @default(0)
+  movements       StockMovement[]
+  saleDetails     SaleDetail[]
+  purchaseDetails PurchaseDetail[]
+  createdAt       DateTime         @default(now())
+}
+
+model StockMovement {
+  id        Int          @id @default(autoincrement())
+  type      MovementType
+  quantity  Int
+  product   Product      @relation(fields: [productId], references: [id])
+  productId Int
+  createdAt DateTime     @default(now())
+}
+
+model Sale {
+  id            Int          @id @default(autoincrement())
+  invoiceNumber String       @unique // N° de Boleta
+  customerName  String?      // Cliente (opcional)
+  userId        Int?         // Usuario que realizó la venta
+  user          User?        @relation(fields: [userId], references: [id])
+  total         Float
+  createdAt     DateTime     @default(now())
+  details       SaleDetail[]
+}
+
+model SaleDetail {
+  id        Int      @id @default(autoincrement())
+  saleId    Int
+  sale      Sale     @relation(fields: [saleId], references: [id])
+  productId Int
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int
+  unitPrice Float
+  subtotal  Float
+}
+
+model Supplier {
+  id        Int        @id @default(autoincrement())
+  name      String
+  phone     String?
+  email     String?
+  purchases Purchase[]
+  createdAt DateTime   @default(now())
+}
+
+model Purchase {
+  id             Int              @id @default(autoincrement())
+  invoiceNumber  String           @unique // N° de Factura del Proveedor
+  supplierId     Int
+  supplier       Supplier         @relation(fields: [supplierId], references: [id])
+  userId         Int?             // Usuario que registró la compra
+  user           User?            @relation(fields: [userId], references: [id])
+  total          Float
+  createdAt      DateTime         @default(now())
+  details        PurchaseDetail[]
+}
+
+model PurchaseDetail {
+  id         Int      @id @default(autoincrement())
+  purchaseId Int
+  purchase   Purchase @relation(fields: [purchaseId], references: [id])
+  productId  Int
+  product    Product  @relation(fields: [productId], references: [id])
+  quantity   Int
+  unitCost   Float    // Costo de compra (suele ser menor al price de venta)
+  subtotal   Float    // quantity * unitCost
+}
+
+
+enum MovementType {
+  IN
+  OUT
+  ADJUSTMENT
+}
